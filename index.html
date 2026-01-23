@@ -3,20 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Video Creator Portfolio</title>
+    <title>Neon Portfolio Ultimate (No Lag)</title>
     
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
 
-        /* --- БАЗА --- */
+        /* --- ОПТИМИЗАЦИЯ ПРОИЗВОДИТЕЛЬНОСТИ --- */
         * { -webkit-tap-highlight-color: transparent; outline: none; box-sizing: border-box; }
+        
         html, body {
             margin: 0; padding: 0; width: 100%; height: 100%;
             overflow: hidden; background-color: #000;
             font-family: 'Inter', sans-serif;
             touch-action: none; user-select: none; -webkit-user-select: none;
+            /* Аппаратное ускорение для всей страницы */
+            transform: translateZ(0);
         }
         body { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); }
 
@@ -35,15 +38,18 @@
             perspective: 850px; 
             position: relative; display: flex; justify-content: center; align-items: center;
             cursor: grab;
+            /* Оптимизация скролла */
+            touch-action: pan-y;
         }
         .carousel-container:active { cursor: grabbing; }
 
         .carousel {
             width: 100%; height: 100%;
             position: absolute; transform-style: preserve-3d;
+            will-change: transform; /* Подсказка браузеру */
         }
         
-        /* --- РАЗМЕРЫ КАРТОЧКИ --- */
+        /* --- РАЗМЕРЫ --- */
         :root {
             --w: 240px;
             --h: 460px;
@@ -57,6 +63,8 @@
             margin-top: calc(var(--h) / -2); 
             transform-style: preserve-3d;
             cursor: pointer; z-index: 10; 
+            /* Оптимизация отрисовки */
+            backface-visibility: hidden;
         }
 
         .phone-body { 
@@ -65,6 +73,7 @@
             transform-style: preserve-3d; 
             transform-origin: center center;
             transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+            will-change: transform;
         }
 
         /* --- СЛОИ СТЕКЛА --- */
@@ -73,14 +82,14 @@
             inset: 0;
             border-radius: 30px;
             pointer-events: none;
-            backface-visibility: visible;
+            backface-visibility: hidden; /* Важно для производительности */
         }
 
         .layer.front {
             transform: translateZ(4px); 
             z-index: 20;
             overflow: hidden;
-            background: #000;
+            background: #111; /* Цвет фона пока грузится видео */
             border: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); 
             pointer-events: auto;
@@ -102,7 +111,7 @@
             box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
         }
 
-        /* --- ИНТЕРФЕЙС: СТАТИСТИКА --- */
+        /* --- СТАТИСТИКА --- */
         .stats-badge {
             position: absolute; bottom: 20px; left: 15px;
             background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);
@@ -127,26 +136,15 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
             transition: transform 0.1s, border-width 0.1s;
         }
-        .sound-toggle:active {
-            transform: scale(0.95) translateY(2px);
-            border-bottom-width: 2px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        }
+        .sound-toggle:active { transform: scale(0.95) translateY(2px); border-bottom-width: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         .sound-toggle svg { width: 24px; height: 24px; fill: white; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
-        
         .sound-off { display: block; } .sound-on { display: none; }
-        .sound-toggle.active {
-            border-color: #00ff88; 
-            background: radial-gradient(circle at 30% 30%, rgba(0, 50, 20, 0.9), #000);
-        }
-        .sound-toggle.active .sound-off { display: none; }
-        .sound-toggle.active .sound-on { display: block; }
+        .sound-toggle.active { border-color: #00ff88; background: radial-gradient(circle at 30% 30%, rgba(0, 50, 20, 0.9), #000); }
+        .sound-toggle.active .sound-off { display: none; } .sound-toggle.active .sound-on { display: block; }
 
-
-        /* --- 3D МОДЕЛЬ (СЛЕВА) --- */
+        /* --- 3D МОДЕЛЬ --- */
         .tg-3d-wrapper {
-            position: fixed; 
-            top: 25px; left: 25px; 
+            position: fixed; top: 25px; left: 25px; 
             width: 80px; height: 80px;
             z-index: 2000;
             display: flex; justify-content: center; align-items: center;
@@ -154,30 +152,14 @@
             transition: transform 0.1s ease;
             cursor: pointer;
         }
-
         model-viewer {
             width: 100%; height: 100%;
-            --poster-color: transparent;
-            background-color: transparent;
-            pointer-events: none; 
+            --poster-color: transparent; background-color: transparent; pointer-events: none; 
             filter: saturate(1.5) brightness(1.1) drop-shadow(0 0 15px rgba(42, 171, 238, 0.6));
         }
-
-        .tg-link-overlay {
-            position: absolute; inset: 0;
-            z-index: 2005;
-        }
-
-        .tg-3d-wrapper:active {
-            transform: scale(0.9);
-            animation: none; 
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0) rotateZ(0deg); }
-            50% { transform: translateY(-8px) rotateZ(2deg); }
-        }
-
+        .tg-link-overlay { position: absolute; inset: 0; z-index: 2005; }
+        .tg-3d-wrapper:active { transform: scale(0.9); animation: none; }
+        @keyframes float { 0%, 100% { transform: translateY(0) rotateZ(0deg); } 50% { transform: translateY(-8px) rotateZ(2deg); } }
 
         /* --- КОНТЕНТ --- */
         .crack-layer {
@@ -187,13 +169,14 @@
             opacity: 0; z-index: 50; 
             transition: opacity 0.05s linear;
         }
-
         .video-container {
             position: absolute; inset: 0; background: #000;
             transition: filter 0.2s ease;
+            /* Скругляем углы видео, чтобы не торчали */
+            border-radius: 28px; 
+            overflow: hidden;
         }
         .layer.front video { width: 100%; height: 100%; object-fit: cover; display: block; }
-
 
         /* --- ИНТЕРАКТИВ --- */
         .card.is-tilted .layer.inner {
@@ -201,23 +184,17 @@
             background: rgba(255, 255, 255, 0.25);
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
         }
-        .card.is-tilted .layer.back {
-            box-shadow: 0 0 40px rgba(255, 255, 255, 0.6);
-        }
+        .card.is-tilted .layer.back { box-shadow: 0 0 40px rgba(255, 255, 255, 0.6); }
 
-        /* Разбитие */
         .card.broken .crack-layer { opacity: 1; transform: scale(1.05); }
         .card.broken .video-container { filter: contrast(1.5) brightness(1.3) grayscale(0.6); }
         .card.broken .layer.front { border-color: #fff; box-shadow: 0 0 50px rgba(255,255,255,1); }
         .card.broken .phone-body { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
         
         @keyframes shake {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            20% { transform: translate(-3px, 0) rotate(-1deg); }
-            40% { transform: translate(3px, 0) rotate(1deg); }
-            60% { transform: translate(-3px, 0) rotate(0deg); }
-            80% { transform: translate(3px, 0) rotate(-1deg); }
-            100% { transform: translate(0, 0) rotate(0deg); }
+            0% { transform: translate(0, 0) rotate(0deg); } 20% { transform: translate(-3px, 0) rotate(-1deg); }
+            40% { transform: translate(3px, 0) rotate(1deg); } 60% { transform: translate(-3px, 0) rotate(0deg); }
+            80% { transform: translate(3px, 0) rotate(-1deg); } 100% { transform: translate(0, 0) rotate(0deg); }
         }
         
         .pagination {
@@ -247,25 +224,20 @@
 
 <div class="tg-3d-wrapper">
     <a href="https://t.me/sea120587" target="_blank" class="tg-link-overlay"></a>
-    <model-viewer 
-        src="telegram.glb" 
-        shadow-intensity="1.5" 
-        exposure="1.2"
-        tone-mapping="neutral"
-        environment-image="neutral"
-        disable-zoom 
-        disable-pan 
-        interaction-prompt="none"
-        camera-orbit="0deg 90deg 2.5m">
-    </model-viewer>
+    <model-viewer src="telegram.glb" shadow-intensity="1.5" exposure="1.2" tone-mapping="neutral" environment-image="neutral" disable-zoom disable-pan interaction-prompt="none" camera-orbit="0deg 90deg 2.5m"></model-viewer>
 </div>
 
 <div class="fullpage-container">
+    
     <div class="section"><div class="carousel-container"><div class="carousel">
         <div class="card"><div class="phone-body">
             <div class="layer front">
                 <div class="crack-layer"></div>
-                <div class="video-container"><video loop muted playsinline preload="metadata" poster="poster_1.jpg"><source src="1.mp4" type="video/mp4"></video></div>
+                <div class="video-container">
+                    <video loop muted playsinline poster="poster_1.jpg">
+                        <source data-src="1.mp4" type="video/mp4">
+                    </video>
+                </div>
                 <div class="stats-badge"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 1.2M</div>
             </div>
             <div class="layer inner"></div><div class="layer inner"></div><div class="layer inner"></div><div class="layer back"></div>
@@ -274,7 +246,11 @@
         <div class="card"><div class="phone-body">
             <div class="layer front">
                 <div class="crack-layer"></div>
-                <div class="video-container"><video loop muted playsinline preload="metadata" poster="poster_01.jpg"><source src="01.mp4" type="video/mp4"></video></div>
+                <div class="video-container">
+                    <video loop muted playsinline poster="poster_01.jpg">
+                        <source data-src="01.mp4" type="video/mp4">
+                    </video>
+                </div>
                 <div class="stats-badge"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 850K</div>
             </div>
             <div class="layer inner"></div><div class="layer inner"></div><div class="layer inner"></div><div class="layer back"></div>
@@ -283,7 +259,11 @@
         <div class="card"><div class="phone-body">
             <div class="layer front">
                 <div class="crack-layer"></div>
-                <div class="video-container"><video loop muted playsinline preload="metadata" poster="poster_001.jpg"><source src="001.mp4" type="video/mp4"></video></div>
+                <div class="video-container">
+                    <video loop muted playsinline poster="poster_001.jpg">
+                        <source data-src="001.mp4" type="video/mp4">
+                    </video>
+                </div>
                 <div class="stats-badge"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 2.4M</div>
             </div>
             <div class="layer inner"></div><div class="layer inner"></div><div class="layer inner"></div><div class="layer back"></div>
@@ -294,7 +274,11 @@
         <div class="card"><div class="phone-body">
             <div class="layer front">
                 <div class="crack-layer"></div>
-                <div class="video-container"><video loop muted playsinline preload="metadata" poster="poster_02.jpg"><source src="02.mp4" type="video/mp4"></video></div>
+                <div class="video-container">
+                    <video loop muted playsinline poster="poster_02.jpg">
+                        <source data-src="02.mp4" type="video/mp4">
+                    </video>
+                </div>
                 <div class="stats-badge"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 400K</div>
             </div>
             <div class="layer inner"></div><div class="layer inner"></div><div class="layer inner"></div><div class="layer back"></div>
@@ -302,7 +286,11 @@
         <div class="card"><div class="phone-body">
             <div class="layer front">
                 <div class="crack-layer"></div>
-                <div class="video-container"><video loop muted playsinline preload="metadata" poster="poster_002.jpg"><source src="002.mp4" type="video/mp4"></video></div>
+                <div class="video-container">
+                    <video loop muted playsinline poster="poster_002.jpg">
+                        <source data-src="002.mp4" type="video/mp4">
+                    </video>
+                </div>
                 <div class="stats-badge"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 90K</div>
             </div>
             <div class="layer inner"></div><div class="layer inner"></div><div class="layer inner"></div><div class="layer back"></div>
@@ -310,7 +298,11 @@
         <div class="card"><div class="phone-body">
             <div class="layer front">
                 <div class="crack-layer"></div>
-                <div class="video-container"><video loop muted playsinline preload="metadata" poster="poster_0002.jpg"><source src="0002.mp4" type="video/mp4"></video></div>
+                <div class="video-container">
+                    <video loop muted playsinline poster="poster_0002.jpg">
+                        <source data-src="0002.mp4" type="video/mp4">
+                    </video>
+                </div>
                 <div class="stats-badge"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 1.1M</div>
             </div>
             <div class="layer inner"></div><div class="layer inner"></div><div class="layer inner"></div><div class="layer back"></div>
@@ -321,7 +313,11 @@
         <div class="card"><div class="phone-body">
             <div class="layer front">
                 <div class="crack-layer"></div>
-                <div class="video-container"><video loop muted playsinline preload="metadata" poster="poster_03.jpg"><source src="03.mp4" type="video/mp4"></video></div>
+                <div class="video-container">
+                    <video loop muted playsinline poster="poster_03.jpg">
+                        <source data-src="03.mp4" type="video/mp4">
+                    </video>
+                </div>
                 <div class="stats-badge"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 500K</div>
             </div>
             <div class="layer inner"></div><div class="layer inner"></div><div class="layer inner"></div><div class="layer back"></div>
@@ -329,7 +325,11 @@
         <div class="card"><div class="phone-body">
             <div class="layer front">
                 <div class="crack-layer"></div>
-                <div class="video-container"><video loop muted playsinline preload="metadata" poster="poster_003.jpg"><source src="003.mp4" type="video/mp4"></video></div>
+                <div class="video-container">
+                    <video loop muted playsinline poster="poster_003.jpg">
+                        <source data-src="003.mp4" type="video/mp4">
+                    </video>
+                </div>
                 <div class="stats-badge"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 300K</div>
             </div>
             <div class="layer inner"></div><div class="layer inner"></div><div class="layer inner"></div><div class="layer back"></div>
@@ -337,7 +337,11 @@
         <div class="card"><div class="phone-body">
             <div class="layer front">
                 <div class="crack-layer"></div>
-                <div class="video-container"><video loop muted playsinline preload="metadata" poster="poster_0003.jpg"><source src="0003.mp4" type="video/mp4"></video></div>
+                <div class="video-container">
+                    <video loop muted playsinline poster="poster_0003.jpg">
+                        <source data-src="0003.mp4" type="video/mp4">
+                    </video>
+                </div>
                 <div class="stats-badge"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 770K</div>
             </div>
             <div class="layer inner"></div><div class="layer inner"></div><div class="layer inner"></div><div class="layer back"></div>
@@ -370,15 +374,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const playSound = (audio) => { if(audio) { audio.currentTime = 0; audio.play().catch(e => {}); }};
 
-    // --- ЛОГИКА MUTE/UNMUTE ---
     const soundBtn = document.getElementById('sound-btn');
     let isMuted = true;
     
     soundBtn.addEventListener('click', () => {
         isMuted = !isMuted;
         soundBtn.classList.toggle('active', !isMuted);
+        // Включаем звук только на активном видео
         document.querySelectorAll('video').forEach(vid => {
-            vid.muted = isMuted;
+            if(!vid.paused) vid.muted = isMuted;
         });
         if(!isMuted && navigator.vibrate) navigator.vibrate(50);
     });
@@ -389,7 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const cards = document.querySelectorAll('.card');
     
     let currentSection = 0;
-    // Создаем массив индексов для каждого этажа автоматически
     const carouselIndices = new Array(carousels.length).fill(0); 
     const windowHeight = window.innerHeight;
 
@@ -412,9 +415,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const x = e.clientX - rect.left; 
             const y = e.clientY - rect.top;  
             const w = rect.width;
-            const h = rect.height;
+            
             const centerX = w / 2;
-            const centerY = h / 2;
+            const centerY = rect.height / 2;
             const dist = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
             const zoneRadius = w * CENTER_ZONE_RADIUS;
 
@@ -448,26 +451,58 @@ document.addEventListener('DOMContentLoaded', () => {
     function snapToSection() {
         container.style.transition = 'transform 0.6s cubic-bezier(0.2, 0.9, 0.1, 1)';
         container.style.transform = `translateY(-${currentSection * 100}%)`;
-        document.querySelectorAll('video').forEach(v => v.pause());
+        
+        // ОПТИМИЗАЦИЯ: Ставим все видео на паузу при смене этажа
+        document.querySelectorAll('video').forEach(v => {
+            v.pause();
+            v.removeAttribute('src'); // Удаляем из памяти
+            v.load(); 
+        });
+
         const activeCarousel = carousels[currentSection];
-        playActiveVideo(activeCarousel, carouselIndices[currentSection]);
+        // Небольшая задержка, чтобы анимация скролла прошла плавно перед загрузкой видео
+        setTimeout(() => {
+            playActiveVideo(activeCarousel, carouselIndices[currentSection]);
+        }, 300);
+        
         dots.forEach((dot, idx) => dot.classList.toggle('active', idx === currentSection));
         playSound(soundTrans);
     }
 
+    // --- ГЛАВНАЯ ФУНКЦИЯ ОПТИМИЗАЦИИ (Lazy Load) ---
     function playActiveVideo(carousel, index) {
         const c_cards = carousel.querySelectorAll('.card');
         const count = c_cards.length;
         let realIndex = ((index % count) + count) % count;
+
         c_cards.forEach((card, i) => {
-            const v = card.querySelector('video');
-            if(i === realIndex) {
-                setTimeout(() => {
-                    v.muted = isMuted; 
-                    v.play().catch(()=>{});
-                }, 50);
+            const video = card.querySelector('video');
+            const source = video.querySelector('source');
+            
+            if (i === realIndex) {
+                // ЭТО АКТИВНАЯ КАРТОЧКА
+                if (!video.getAttribute('src')) {
+                    // Если видео еще не загружено - загружаем его
+                    const videoSrc = source.getAttribute('data-src');
+                    if (videoSrc) {
+                        video.src = videoSrc;
+                        video.muted = isMuted;
+                        video.load();
+                        video.play().catch(e => console.log('Autoplay blocked', e));
+                    }
+                } else {
+                    // Если уже было загружено - просто играем
+                    video.muted = isMuted;
+                    video.play().catch(e => {});
+                }
             } else {
-                v.pause();
+                // ЭТО ФОНОВАЯ КАРТОЧКА
+                // Полностью убиваем видео, чтобы освободить память
+                if (video.getAttribute('src')) {
+                    video.pause();
+                    video.removeAttribute('src');
+                    video.load(); // Применяем очистку
+                }
             }
         });
     }
@@ -506,7 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const diffY = clientY - startY;
         
         if (Math.abs(diffX) > 5 || Math.abs(diffY) > 5) isMoved = true;
-
         lastDiffX = diffX; lastDiffY = diffY;
 
         if (!direction) {
@@ -525,7 +559,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (direction === 'vertical') {
             if(e) e.preventDefault();
             let resistance = 1;
-            // Умное сопротивление на краях
             if ((currentSection === 0 && diffY > 0) || (currentSection === carousels.length - 1 && diffY < 0)) resistance = 0.4; 
             const newTranslateY = startYPos + (diffY * resistance);
             container.style.transform = `translateY(${newTranslateY}px)`;
@@ -540,23 +573,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const count = currentCarousel.querySelectorAll('.card').length;
             const anglePerCard = 360 / count;
             let nearestIndex = Math.round(-currentRotation / anglePerCard);
+            
             if(carouselIndices[currentSection] !== nearestIndex) playSound(soundSwipe);
+            
             carouselIndices[currentSection] = nearestIndex;
             currentCarousel.style.transition = 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
             currentCarousel.style.transform = `rotateY(${-(nearestIndex * anglePerCard)}deg)`;
-            playActiveVideo(currentCarousel, nearestIndex);
+            
+            // Запускаем видео только после окончания анимации
+            setTimeout(() => {
+                playActiveVideo(currentCarousel, nearestIndex);
+            }, 100);
         }
 
         if (direction === 'vertical') {
             const thresholdPx = windowHeight * 0.10;
             const diffY = lastDiffY;
-            
-            // ОБНОВЛЕННАЯ ЛОГИКА: Автоматический подсчет количества этажей
-            if (diffY < -thresholdPx && currentSection < carousels.length - 1) {
-                currentSection++;
-            } else if (diffY > thresholdPx && currentSection > 0) {
-                currentSection--;
-            }
+            if (diffY < -thresholdPx && currentSection < carousels.length - 1) currentSection++;
+            else if (diffY > thresholdPx && currentSection > 0) currentSection--;
             snapToSection();
         }
     };
@@ -569,6 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY, e));
     window.addEventListener('mouseup', handleEnd);
 
+    // Запускаем первое видео на старте
     playActiveVideo(carousels[0], 0);
 });
 </script>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Editor Portfolio</title>
+    
+    <!-- Подключение Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Иконки Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Шрифты -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Courier+Prime&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#6366f1',
+                        dark: '#0a0a0f',
+                        surface: '#13131a'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Courier Prime', 'monospace'],
+                    },
+                    cursor: {
+                        'grab': 'grab',
+                        'grabbing': 'grabbing',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* --- ГЛОБАЛЬНЫЕ СТИЛИ --- */
+        body {
+            background-color: #0a0a0f;
+            color: #fff;
+            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+        }
+        
+        .noise-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: url("https://grainy-gradients.vercel.app/noise.svg");
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* --- 3D КАРУСЕЛЬ --- */
+        .scene {
+            perspective: 1200px; 
+            position: relative;
+            transform-style: preserve-3d;
+            cursor: grab;
+        }
+        .scene:active {
+            cursor: grabbing;
+        }
+
+        .carousel-ring {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform-style: preserve-3d;
+        }
+
+        .carousel-item-wrapper {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform-style: preserve-3d;
+            pointer-events: none; 
+        }
+        
+        .carousel-item-wrapper > * {
+            pointer-events: auto; 
+        }
+
+        /* --- SOLID GLASS CARD (HIGH DENSITY STACK) --- */
+        .card-3d {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+        }
+
+        /* Общие стили для всех слоев */
+        .card-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border-radius: 24px; 
+            backface-visibility: visible;
+        }
+
+        /* ПЕРЕДНИЙ СЛОЙ (ЭКРАН) */
+        .card-layer.front {
+            transform: translateZ(6px); /* Половина толщины (12px / 2) */
+            background: #000;
+            overflow: hidden;
+            z-index: 20; /* Поверх всех */
+            
+            /* Стеклянный кантик */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+        }
+
+        /* ЗАДНИЙ СЛОЙ */
+        .card-layer.back {
+            transform: translateZ(-6px);
+            background: rgba(20, 20, 25, 1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1;
+        }
+
+        /* ВНУТРЕННИЕ СЛОИ (ТЕЛО МОНОЛИТА) */
+        .card-layer.middle {
+            /* Убираем явный бордер, оставляем едва заметный, чтобы скрыть "полоски" */
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            /* Полупрозрачность для смешивания цветов */
+            opacity: 0.2; 
+            /* Небольшой блюр помогает слить слои */
+            /* backdrop-filter: blur(1px); - может быть тяжело для производительности, пока уберем */
+        }
+
+        /* Hover & Active Effects */
+        .card-3d:hover {
+            transform: scale(1.03);
+        }
+        .card-3d:hover .card-layer.front {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 15px 40px rgba(99, 102, 241, 0.2);
+        }
+
+        /* PLAYING STATE */
+        .card-3d.playing {
+            transform: scale(1.05);
+        }
+        .card-3d.playing .card-layer.front {
+            border-color: #818cf8;
+            box-shadow: 
+                0 0 0 1px #6366f1, 
+                0 0 40px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Video Styles */
+        .card-video {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: 0.6;
+            transition: opacity 0.4s, filter 0.4s;
+            filter: grayscale(40%) contrast(1.1);
+        }
+        
+        .card-3d:hover .card-video { opacity: 0.9; filter: grayscale(0%); }
+        .card-3d.playing .card-video { opacity: 1; filter: grayscale(0%); }
+        .card-3d.playing .card-overlay { opacity: 0; }
+        .card-overlay { transition: opacity 0.3s; }
+
+        /* Размеры */
+        .card-vertical {
+            width: 240px; height: 420px;
+            margin-left: -120px; margin-top: -210px;
+        }
+        .card-horizontal {
+            width: 480px; height: 270px;
+            margin-left: -240px; margin-top: -135px;
+        }
+
+        @media (max-width: 768px) {
+            .card-vertical { width: 180px; height: 320px; margin-left: -90px; margin-top: -160px; }
+            .card-horizontal { width: 280px; height: 158px; margin-left: -140px; margin-top: -79px; }
+            .scene { perspective: 800px; }
+        }
+
+        .cursor-blink { animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="selection:bg-brand selection:text-white">
+
+    <div class="noise-overlay"></div>
+
+    <!-- Навигация -->
+    <nav class="fixed top-0 left-0 w-full z-40 px-6 py-6 flex justify-between items-center mix-blend-difference">
+        <div class="text-xl font-bold tracking-tighter">PORTFOLIO.<span class="text-brand">IO</span></div>
+        <div class="flex gap-4">
+            <button class="px-6 py-2 border border-white/20 rounded-full text-xs hover:bg-white hover:text-black transition uppercase tracking-widest">
+                Contact Me
+            </button>
+        </div>
+    </nav>
+
+    <!-- 1. HERO SECTION (REELS / VERTICAL) -->
+    <section class="min-h-screen flex flex-col lg:flex-row items-center justify-center relative pt-20 lg:pt-0 overflow-hidden">
+        <div class="w-full lg:w-1/2 px-8 lg:px-20 z-10 flex flex-col justify-center h-full order-2 lg:order-1 mt-10 lg:mt-0 pointer-events-none">
+            <div class="pointer-events-auto">
+                <h1 class="text-5xl lg:text-7xl font-black leading-[0.9] tracking-tighter mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-300">
+                    VISUAL<br>ALCHEMY
+                </h1>
+                <div class="font-mono text-brand text-lg h-8 flex items-center mb-8">
+                    <span class="mr-2">></span>
+                    <span id="typing-text"></span>
+                    <span class="w-2 h-5 bg-brand ml-1 cursor-blink"></span>
+                </div>
+                <p class="text-gray-400 max-w-md mb-8 leading-relaxed">
+                    Превращаю исходники в динамичные истории. Работаю с Adobe Premiere, After Effects и нейросетями. Специализация: Reels, YouTube, Ads.
+                </p>
+                 <div class="text-xs text-gray-500 font-mono mt-4 flex items-center gap-2">
+                    <i data-lucide="hand" class="w-4 h-4"></i> Drag to rotate
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full lg:w-1/2 h-[600px] lg:h-screen flex items-center justify-center relative z-0 order-1 lg:order-2 perspective-container">
+            <div class="absolute inset-0 bg-brand/10 blur-[100px] rounded-full transform scale-50 pointer-events-none"></div>
+            <div class="scene w-full h-full flex items-center justify-center" id="scene-vertical">
+                <div class="carousel-ring" id="carousel-vertical"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. HORIZONTAL SECTION (YOUTUBE) -->
+    <section class="min-h-screen py-20 border-t border-white/5 bg-gradient-to-b from-transparent to-brand/5 relative overflow-hidden flex flex-col justify-center">
+        <div class="container mx-auto px-6 mb-10 z-10 text-center relative pointer-events-none">
+            <h2 class="text-3xl lg:text-5xl font-bold uppercase tracking-wide mb-2 text-white pointer-events-auto">Long Form Works</h2>
+            <p class="text-gray-500 font-mono text-sm pointer-events-auto">Interactive 3D Gallery</p>
+        </div>
+        <div class="w-full h-[400px] md:h-[500px] flex items-center justify-center relative perspective-container">
+            <div class="scene w-full h-full flex items-center justify-center" id="scene-horizontal">
+                <div class="carousel-ring" id="carousel-horizontal"></div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-10 text-center text-gray-600 text-sm font-mono border-t border-white/5">
+        <p>© 2026 Ultimate Portfolio.</p>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // =================================================================
+        //                 НАСТРОЙКИ КОНТЕНТА (РЕДАКТИРОВАТЬ ЗДЕСЬ)
+        // =================================================================
+
+        // 1. ВЕРТИКАЛЬНЫЕ ВИДЕО (REELS / SHORTS)
+        // Просто добавь или удали строчку. Файлы: 1.mp4, 2.mp4...
+        const verticalProjects = [
+            { 
+                title: "Car Edit", 
+                desc: "Dynamic Cuts", 
+                video: "1.mp4", // <--- Имя файла
+                color: "from-blue-500 to-purple-500" 
+            },
+            { 
+                title: "Fashion", 
+                desc: "Clean Style", 
+                video: "2.mp4", 
+                color: "from-pink-500 to-rose-500" 
+            },
+            { 
+                title: "Music", 
+                desc: "VFX Flow", 
+                video: "3.mp4", 
+                color: "from-amber-500 to-orange-500" 
+            },
+            { 
+                title: "Expert", 
+                desc: "Talking Head", 
+                video: "4.mp4", 
+                color: "from-emerald-500 to-teal-500" 
+            },
+            { 
+                title: "Travel", 
+                desc: "Cinematic", 
+                video: "5.mp4", 
+                color: "from-cyan-500 to-blue-500" 
+            }
+        ];
+
+        // 2. ГОРИЗОНТАЛЬНЫЕ ВИДЕО (YOUTUBE)
+        // Файлы: 01.mp4, 02.mp4...
+        const horizontalProjects = [
+            { 
+                title: "Tech Review", 
+                desc: "YouTube 4K", 
+                video: "01.mp4", // <--- Имя файла
+                color: "from-indigo-500 to-blue-500" 
+            },
+            { 
+                title: "Interview", 
+                desc: "Multicam", 
+                video: "02.mp4", 
+                color: "from-gray-700 to-gray-900" 
+            },
+            { 
+                title: "Doc", 
+                desc: "Color Grade", 
+                video: "03.mp4", 
+                color: "from-orange-700 to-red-900" 
+            },
+            { 
+                title: "Gaming", 
+                desc: "Highlights", 
+                video: "04.mp4", 
+                color: "from-green-600 to-emerald-800" 
+            },
+            { 
+                title: "Short Film", 
+                desc: "Directing", 
+                video: "05.mp4", 
+                color: "from-purple-900 to-black" 
+            }
+        ];
+        
+        // =================================================================
+        //                 КОНЕЦ НАСТРОЕК (ДАЛЬШЕ НЕ ТРОГАТЬ)
+        // =================================================================
+
+
+        // SOUNDS
+        function playPremiumClick() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const t = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(150, t);
+            osc.frequency.exponentialRampToValueAtTime(40, t + 0.2);
+            gain.gain.setValueAtTime(0.4, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(t);
+            osc.stop(t + 0.25);
+        }
+
+        let lastTickTime = 0;
+        function playScrollTick() {
+             if (audioCtx.state === 'suspended') return;
+             if (Date.now() - lastTickTime < 60) return; 
+             lastTickTime = Date.now();
+             const t = audioCtx.currentTime;
+             const osc = audioCtx.createOscillator();
+             const gain = audioCtx.createGain();
+             osc.type = 'square';
+             osc.frequency.setValueAtTime(400, t);
+             osc.frequency.exponentialRampToValueAtTime(100, t + 0.03);
+             gain.gain.setValueAtTime(0.03, t);
+             gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+             const filter = audioCtx.createBiquadFilter();
+             filter.type = 'lowpass';
+             filter.frequency.value = 1000;
+             osc.connect(filter);
+             filter.connect(gain);
+             gain.connect(audioCtx.destination);
+             osc.start(t);
+             osc.stop(t + 0.04);
+        }
+
+        // LOGIC
+        const carousels = {
+            vertical: { 
+                el: document.getElementById('carousel-vertical'), 
+                scene: document.getElementById('scene-vertical'),
+                items: verticalProjects, 
+                theta: 360 / verticalProjects.length,
+                currAngle: 0, targetAngle: 0, isDragging: false, startX: 0, startAngle: 0
+            },
+            horizontal: { 
+                el: document.getElementById('carousel-horizontal'), 
+                scene: document.getElementById('scene-horizontal'),
+                items: horizontalProjects, 
+                theta: 360 / horizontalProjects.length,
+                currAngle: 0, targetAngle: 0, isDragging: false, startX: 0, startAngle: 0
+            }
+        };
+
+        function initCarousels() {
+            Object.keys(carousels).forEach(key => {
+                const c = carousels[key];
+                const radius = key === 'vertical' ? 300 : 450; 
+
+                c.items.forEach((item, i) => {
+                    const cardWrapper = document.createElement('div');
+                    cardWrapper.className = `carousel-item-wrapper ${key === 'vertical' ? 'card-vertical' : 'card-horizontal'}`;
+                    cardWrapper.style.transform = `rotateY(${i * c.theta}deg) translateZ(${radius}px)`;
+                    
+                    // ГЕНЕРАЦИЯ МОНОЛИТА (11 слоев для плотности)
+                    // Фронт на +6px, Тыл на -6px. Заполняем пространство между ними.
+                    // Шаг 1px: 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5
+                    
+                    let middleLayers = '';
+                    for (let z = 5; z >= -5; z -= 1) {
+                        middleLayers += `<div class="card-layer middle bg-gradient-to-br ${item.color}" style="transform: translateZ(${z}px)"></div>`;
+                    }
+                    
+                    cardWrapper.innerHTML = `
+                        <div class="card-3d group" onclick="toggleVideo(this)">
+                            <!-- Передний слой (Видео) -->
+                            <div class="card-layer front">
+                                <div class="absolute inset-0 bg-gradient-to-br ${item.color} opacity-20 pointer-events-none"></div>
+                                <video src="${item.video}" class="card-video" muted loop playsinline></video>
+                                <div class="card-overlay absolute inset-0 flex flex-col items-center justify-center p-4 text-center z-10 pointer-events-none">
+                                    <div class="w-12 h-12 rounded-full bg-white/10 backdrop-blur flex items-center justify-center mb-3 group-hover:bg-brand group-hover:text-white transition-colors text-white/80">
+                                        <i data-lucide="play" class="w-5 h-5 ml-1"></i>
+                                    </div>
+                                    <h3 class="font-bold uppercase tracking-wider text-sm">${item.title}</h3>
+                                    <p class="text-[10px] text-gray-400 font-mono mt-1">${item.desc}</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Плотное тело (Монолит) -->
+                            ${middleLayers}
+                            
+                            <!-- Задний слой -->
+                            <div class="card-layer back"></div>
+                        </div>
+                    `;
+                    c.el.appendChild(cardWrapper);
+                });
+
+                // Events
+                c.scene.addEventListener('mousedown', (e) => startDrag(e, c));
+                window.addEventListener('mousemove', (e) => moveDrag(e, c));
+                window.addEventListener('mouseup', () => endDrag(c));
+                c.scene.addEventListener('touchstart', (e) => startDrag(e.touches[0], c));
+                window.addEventListener('touchmove', (e) => moveDrag(e.touches[0], c));
+                window.addEventListener('touchend', () => endDrag(c));
+
+                animateCarousel(c);
+            });
+            lucide.createIcons();
+        }
+
+        function toggleVideo(card) {
+            const video = card.querySelector('video');
+            if (!video.getAttribute('src')) {
+                playPremiumClick(); 
+                return;
+            }
+            if (video.muted) {
+                document.querySelectorAll('video').forEach(v => { 
+                    v.muted = true; 
+                    v.closest('.card-3d').classList.remove('playing'); 
+                });
+                video.muted = false;
+                video.currentTime = 0;
+                video.play();
+                card.classList.add('playing');
+                playPremiumClick(); 
+            } else {
+                video.muted = true;
+                card.classList.remove('playing');
+            }
+        }
+
+        function startDrag(e, c) {
+            c.isDragging = true;
+            c.startX = e.clientX;
+            c.startAngle = c.targetAngle;
+            c.scene.style.cursor = 'grabbing';
+            document.querySelectorAll('video').forEach(v => v.muted = true);
+            document.querySelectorAll('.card-3d').forEach(el => el.classList.remove('playing'));
+        }
+
+        function moveDrag(e, c) {
+            if (!c.isDragging) return;
+            const x = e.clientX;
+            const diff = (x - c.startX) * 0.4; 
+            c.targetAngle = c.startAngle + diff;
+            playScrollTick(); 
+        }
+
+        function endDrag(c) {
+            if(!c.isDragging) return;
+            c.isDragging = false;
+            c.scene.style.cursor = 'grab';
+            const snapIndex = Math.round(c.targetAngle / c.theta);
+            c.targetAngle = snapIndex * c.theta;
+        }
+
+        function animateCarousel(c) {
+            c.currAngle += (c.targetAngle - c.currAngle) * 0.1;
+            c.el.style.transform = `rotateY(${c.currAngle}deg)`;
+            requestAnimationFrame(() => animateCarousel(c));
+        }
+
+        // TYPEWRITER
+        const phrases = ["Video Editor.", "Storyteller.", "Reels Architect.", "Adobe Master."];
+        let phraseIndex = 0;
+        let charIndex = 0;
+        let isDeleting = false;
+        const typingElement = document.getElementById("typing-text");
+
+        function typeEffect() {
+            const currentPhrase = phrases[phraseIndex];
+            if (isDeleting) {
+                typingElement.textContent = currentPhrase.substring(0, charIndex - 1);
+                charIndex--;
+            } else {
+                typingElement.textContent = currentPhrase.substring(0, charIndex + 1);
+                charIndex++;
+            }
+            let speed = isDeleting ? 50 : 100;
+            if (!isDeleting && charIndex === currentPhrase.length) {
+                isDeleting = true; speed = 2000; 
+            } else if (isDeleting && charIndex === 0) {
+                isDeleting = false; phraseIndex = (phraseIndex + 1) % phrases.length; speed = 500; 
+            }
+            setTimeout(typeEffect, speed);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(typeEffect, 1000); 
+            initCarousels();
+            document.addEventListener('click', () => { if (audioCtx.state === 'suspended') audioCtx.resume(); }, { once: true });
+        });
+    </script>
+</body>
+</html>
